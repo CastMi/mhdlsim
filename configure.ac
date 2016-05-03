@@ -1,6 +1,6 @@
 AC_INIT([manager], [0.1])
 AC_CONFIG_SRCDIR([managermain.cc])
-AM_INIT_AUTOMAKE([foreign subdir-objects -Wall])
+AM_INIT_AUTOMAKE([no-define -Wall -Werror foreign subdir-objects])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 AC_CONFIG_MACRO_DIR([m4])
 dnl Process this file with autoconf to produce a configure script.

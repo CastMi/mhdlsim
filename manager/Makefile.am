@@ -18,6 +18,7 @@
 noinst_LTLIBRARIES = libinterface.la
 
 libinterface_la_CPPFLAGS = \
+	-I$(srcdir)/verilog \
 	-I$(top_builddir)/vvp \
 	-I$(top_srcdir)/vvp \
 	-I$(top_srcdir) \

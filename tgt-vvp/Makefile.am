@@ -45,3 +45,19 @@ libvvptarget_la_SOURCES = \
 	vvp.c \
 	vvp_process.c \
 	vvp_scope.c
+
+EXTRA_libvvptarget_la_DEPENDENCIES = create_header
+
+create_header:
+	if test "x$(GIT)" != "xnone" && test -d "$(top_srcdir)/.git"; then \
+	    echo "Using git-describe for VERSION_TAG"; \
+	    tmp=`(cd $(srcdir) && $(GIT) describe --always --dirty) \
+		   | sed -e 's;\(.*\);#define VERSION_TAG "\1";'`; \
+	    echo "$$tmp" | diff - version_tag.h > /dev/null 2>&1 || echo "$$tmp" > version_tag.h || exit 1; \
+	elif test -d "$(top_srcdir)/.git"; then \
+	    echo "Using $(top_srcdir)/version_tag.h for VERSION_TAG"; \
+	    diff $(top_srcdir)/version_tag.h version_tag.h > /dev/null 2>&1 || cp $(top_srcdir)/version_tag.h version_tag.h; \
+	else \
+	    echo "Using empty VERSION_TAG"; \
+	    echo '#define VERSION_TAG ""' > version_tag.h; \
+	fi

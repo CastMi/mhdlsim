@@ -37,6 +37,10 @@
 
 # include  "config.h"
 # include  "vvp_net.h"
+# include  "vpi_priv.h"
+# include <map>
+# include <vector>
+# include <algorithm>
 
 /*
  * This is the basic type of a symbol table. It is opaque. Don't even
@@ -45,38 +49,41 @@
  */
 typedef class symbol_table_s *symbol_table_t;
 
+extern std::map< vvp_net_t*, std::string > handles;
+// module, subinstances
+extern std::map<const std::string, std::vector<std::string>> instances;
+
 typedef struct symbol_value_s {
-      union {
-	    vvp_net_t*net;
-	    void*ptr;
-	    unsigned long num;
-      };
+   union {
+      vvp_net_t*net;
+      void*ptr;
+      unsigned long num;
+   };
 } symbol_value_t;
 
-
 class symbol_table_s {
-    public:
+   public:
       explicit symbol_table_s();
       virtual ~symbol_table_s();
 
-	// This method locates the value in the symbol table and sets its
-	// value. If the key doesn't yet exist, create it.
+      // This method locates the value in the symbol table and sets its
+      // value. If the key doesn't yet exist, create it.
       void sym_set_value(const char*key, symbol_value_t val);
 
-	// This method locates the value in the symbol table and returns
-	// it. If the value does not exist, create it, initialize it with
-	// zero and return the zero value.
+      // This method locates the value in the symbol table and returns
+      // it. If the value does not exist, create it, initialize it with
+      // zero and return the zero value.
       symbol_value_t sym_get_value(const char*key);
 
-    private:
+   private:
       symbol_table_s(const symbol_table_s&) { assert(0); };
       struct tree_node_*root;
       struct key_strings*str_chunk;
       unsigned str_used;
 
       symbol_value_t find_value_(struct tree_node_*cur,
-				 const char*key, symbol_value_t val,
-				 bool force_flag);
+            const char*key, symbol_value_t val,
+            bool force_flag);
       char*key_strdup_(const char*str);
 };
 
@@ -90,6 +97,28 @@ class symbol_table_s {
 inline symbol_table_t new_symbol_table(void) { return new symbol_table_s; }
 inline void delete_symbol_table(symbol_table_t tbl) { delete tbl; }
 
+inline void remember_handle( vvp_net_t* obj, std::string name ) {
+   size_t divider = name.find_last_of(".");
+   assert( divider != std::string::npos );
+   std::string basename = name.substr( 0, divider );
+   std::string signal_name = name.substr( divider + 1 );
+   for( auto& map_el : instances ) {
+      if( map_el.first.compare(basename) )
+         continue;
+      auto found = std::find(map_el.second.begin(), map_el.second.end(), signal_name );
+      if( found != map_el.second.end() ) {
+         handles[obj] = name;
+         map_el.second.erase( std::find(map_el.second.begin(),
+                  map_el.second.end(),
+                  signal_name ) );
+      }
+      if( map_el.second.empty() ) {
+         instances.erase(map_el.first);
+         break;
+      }
+   }
+}
+
 // These are obsolete, and here only to support older code.
 inline void sym_set_value(symbol_table_t tbl, const char*key, symbol_value_t val)
 { tbl->sym_set_value(key, val); }
@@ -102,16 +131,16 @@ inline symbol_value_t sym_get_value(symbol_table_t tbl, const char*key)
  */
 template <class T> class symbol_map_s : private symbol_table_s {
 
-    public:
+   public:
       void sym_set_value(const char*key, T*val)
       { symbol_value_t tmp;
-	tmp.ptr = val;
-	symbol_table_s::sym_set_value(key, tmp);
+         tmp.ptr = val;
+         symbol_table_s::sym_set_value(key, tmp);
       }
 
       T* sym_get_value(const char*key)
       { symbol_value_t val = symbol_table_s::sym_get_value(key);
-	return reinterpret_cast<T*>(val.ptr);
+         return reinterpret_cast<T*>(val.ptr);
       }
 };
 

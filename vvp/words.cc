@@ -21,6 +21,7 @@
 # include  "vpi_priv.h"
 # include  "array.h"
 # include  "vvp_net_sig.h"
+# include  "symbols.h"
 # include  "logic.h"
 # include  "schedule.h"
 #ifdef CHECK_WITH_VALGRIND
@@ -36,6 +37,7 @@ static void __compile_var_real(char*label, char*name,
 			       vvp_array_t array, unsigned long array_addr)
 {
       vvp_net_t*net = new vvp_net_t;
+      remember_handle( net, vpip_peek_current_scope()->vpi_get_str(vpiFullName) + std::string(".") + std::string(name) );
 
       if (vpip_peek_current_scope()->is_automatic()) {
 	    vvp_fun_signal_real_aa*tmp = new vvp_fun_signal_real_aa;
@@ -81,6 +83,7 @@ void compile_varw_real(char*label, vvp_array_t array,
 void compile_var_string(char*label, char*name)
 {
       vvp_net_t*net = new vvp_net_t;
+      remember_handle( net, vpip_peek_current_scope()->vpi_get_str(vpiFullName) + std::string(".") + std::string(name) );
 
       if (vpip_peek_current_scope()->is_automatic()) {
 	    vvp_fun_signal_string_aa*tmp = new vvp_fun_signal_string_aa;
@@ -104,6 +107,7 @@ void compile_var_string(char*label, char*name)
 void compile_var_darray(char*label, char*name)
 {
       vvp_net_t*net = new vvp_net_t;
+      remember_handle( net, vpip_peek_current_scope()->vpi_get_str(vpiFullName) + std::string(".") + std::string(name) );
 
       if (vpip_peek_current_scope()->is_automatic()) {
 	    vvp_fun_signal_object_aa*tmp = new vvp_fun_signal_object_aa;
@@ -127,6 +131,7 @@ void compile_var_darray(char*label, char*name)
 void compile_var_queue(char*label, char*name)
 {
       vvp_net_t*net = new vvp_net_t;
+      remember_handle( net, vpip_peek_current_scope()->vpi_get_str(vpiFullName) + std::string(".") + std::string(name) );
 
       if (vpip_peek_current_scope()->is_automatic()) {
 	    vvp_fun_signal_object_aa*tmp = new vvp_fun_signal_object_aa;
@@ -150,6 +155,7 @@ void compile_var_queue(char*label, char*name)
 void compile_var_cobject(char*label, char*name)
 {
       vvp_net_t*net = new vvp_net_t;
+      remember_handle( net, vpip_peek_current_scope()->vpi_get_str(vpiFullName) + std::string(".") + std::string(name) );
 
       if (vpip_peek_current_scope()->is_automatic()) {
 	    vvp_fun_signal_object_aa*tmp = new vvp_fun_signal_object_aa;
@@ -181,6 +187,7 @@ void compile_variable(char*label, char*name,
       unsigned wid = ((msb > lsb)? msb-lsb : lsb-msb) + 1;
 
       vvp_net_t*net = new vvp_net_t;
+      remember_handle( net, vpip_peek_current_scope()->vpi_get_str(vpiFullName) + std::string(".") + std::string(name) );
 
       if (vpip_peek_current_scope()->is_automatic()) {
 	    vvp_fun_signal4_aa*tmp = new vvp_fun_signal4_aa(wid);
@@ -220,7 +227,9 @@ void compile_variable(char*label, char*name,
 	// If the signal has a name, then it goes into the current
 	// scope as a signal.
       if (name) {
-	    if (obj) vpip_attach_to_current_scope(obj);
+	    if (obj) {
+          vpip_attach_to_current_scope(obj);
+       }
             if (!vpip_peek_current_scope()->is_automatic()) {
 		  vvp_vector4_t tmp;
 		  vfil->vec4_value(tmp);

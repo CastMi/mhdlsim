@@ -22,6 +22,9 @@
 # include  <cstdlib>
 # include  <cassert>
 
+std::map<const std::string, std::vector<std::string>> instances;
+std::map< vvp_net_t*, std::string > handles;
+
 /*
  * The keys of the symbol table are null terminated strings. Keep them
  * in a string buffer, with the strings separated by a single null,

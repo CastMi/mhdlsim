@@ -62,6 +62,7 @@ class IcarusSimulator : public virtual Simulator, public virtual Observer {
       void print_value( vvp_net_t* );
       void register_observers();
       int read_mixed();
+      void debug_output( const std::string& ) const;
       // Members
       vvp_time64_t schedule_time_;
       std::vector<vvp_net_t*> changed_;

@@ -73,13 +73,13 @@ IcarusSimulator::initialize() {
    compile_init();
    int ret = compile_design( VVP_INPUT );
    for( const auto& elem : instances ) {
-      std::cerr << "There are mixed signals that are not traced in the module "
-         << elem.first
-         << ". Unless you really know what you are doing, \
+      std::string tmp = "There are mixed signals that are not traced in the module "
+         + elem.first + ". Unless you really know what you are doing, \
 this scenario should never happen. The signals are:\n";
       for( const auto& signal : elem.second ) {
-         std::cerr << signal << std::endl;
+         tmp += signal + "\n";
       }
+      debug_output( tmp.substr(0, tmp.size() - 1) );
    }
    vvp_destroy_lexor();
    print_vpi_call_errors();
@@ -129,7 +129,7 @@ IcarusSimulator::register_observers() {
    for( const auto& elem : handles ) {
       elem.first->attach( this );
       if( verbose_flag )
-         std::cerr << elem.second << " attached" << std::endl;
+         debug_output( elem.second + " attached" );
    }
 }
 
@@ -168,6 +168,11 @@ IcarusSimulator::other_event() {
    return !schedule_finished() && !is_finished_;
 }
 
+inline void
+IcarusSimulator::debug_output( const std::string& output ) const {
+   std::cerr << "<Icarus>: simulate: " << output << "." << std::endl;
+}
+
 void
 IcarusSimulator::print_value( vvp_net_t* node ) {
    struct t_vpi_value tmp;
@@ -176,9 +181,7 @@ IcarusSimulator::print_value( vvp_net_t* node ) {
    switch( tmp.format ) {
       case vpiIntVal:
          if( verbose_flag ) {
-            std::cerr << handles[node]
-               << " has now value "
-               << tmp.value.integer << std::endl;
+            debug_output( handles[node] + " has now value " + std::to_string(tmp.value.integer));
          }
          break;
       case vpiBinStrVal:
@@ -187,39 +190,31 @@ IcarusSimulator::print_value( vvp_net_t* node ) {
       case vpiDecStrVal:
       case vpiStringVal:
          if( verbose_flag ) {
-            std::cerr << handles[node]
-               << " has now value "
-               << tmp.value.str << std::endl;
+            debug_output( handles[node] + " has now value " + tmp.value.str);
          }
          break;
       case vpiScalarVal:
          if( verbose_flag ) {
-            std::cerr << handles[node]
-               << " has now value "
-               << std::to_string(tmp.value.scalar) << std::endl;
+            debug_output( handles[node] + " has now value " + std::to_string(tmp.value.scalar));
          }
          break;
       case vpiVectorVal:
          if( verbose_flag ) {
-            std::cerr << handles[node]
-               << " has now value "
-               << std::to_string(tmp.value.vector->aval)
-               << std::to_string(tmp.value.vector->bval) << std::endl;
+            debug_output( handles[node] + " has now value "
+                  + std::to_string(tmp.value.vector->aval)
+                  + std::to_string(tmp.value.vector->bval) );
          }
          break;
       case vpiRealVal:
          if( verbose_flag ) {
-            std::cerr << handles[node]
-               << " has now value "
-               << std::to_string(tmp.value.real) << std::endl;
+            debug_output( handles[node] + " has now value " + std::to_string(tmp.value.real));
          }
          break;
       case vpiObjTypeVal:
       case vpiSuppressVal:
       case vpiStrengthVal:
       default:
-         std::cerr << "received a print_value(vvp_net_t*) with an unsupported format"
-            << std::endl;
+         debug_output( "received a print_value(vvp_net_t*) with an unsupported format" );
          assert( false );
          break;
    }
@@ -282,9 +277,9 @@ IcarusSimulator::notify( const Net* net ) {
                   sig = dynamic_cast<__vpiSignal*>( elem );
                   assert(sig);
                   if( !net->name().compare( sig->id.name ) ) {
-                     std::cerr << std::string("sig name ")
-                           << sig->id.name
-                           << " net name " << net->name() << std::endl;
+                     debug_output( std::string("sig name ")
+                           + sig->id.name
+                           + " net name " + net->name() );
                      struct propagate_vector4_event_s* tmp = new propagate_vector4_event_s( vvp_vector4_t(net->width(), 1));
                      tmp->net = sig->node;
                      schedule_event_push_( tmp );
@@ -299,8 +294,7 @@ IcarusSimulator::notify( const Net* net ) {
       }
    }
    if( verbose_flag && is_found ) {
-      std::cerr << std::string(sig->id.name)
-         << " not found" std::endl;
+      debug_output( std::string(sig->id.name) + " not found" );
    }
    is_ignore_notify_ = false;
 }
@@ -308,8 +302,7 @@ IcarusSimulator::notify( const Net* net ) {
 SimResult*
 IcarusSimulator::step_event() {
    if( verbose_flag )
-      std::cerr << "This is the start of a new step"
-         << std::endl;
+      debug_output( "This is the start of a new step" );
    assert( sim_started );
    changed_.clear();
    if( schedule_finished() ) {
@@ -343,8 +336,7 @@ IcarusSimulator::step_event() {
       /* When the design is being traced (we are emitting
        * file/line information) also print any time changes. */
       if (vvp_show_file_line) {
-         std::cerr << "Advancing to simulation time: "
-            << schedule_time_ << std::endl;
+         debug_output( "Advancing to simulation time: " + schedule_time_ );
       }
       ctim->delay = 0;
 
@@ -358,8 +350,7 @@ IcarusSimulator::step_event() {
             ctim->start->next = cur->next;
          }
          if( verbose_flag ) {
-            std::cerr << std::string("Executing ")
-               << cur->name() << std::cerr;
+            debug_output( std::string("Executing ") + cur->name() );
          }
          cur->run_run();
          delete (cur);
@@ -407,8 +398,7 @@ IcarusSimulator::step_event() {
    }
 
    if( verbose_flag ) {
-      std::cerr << std::string("Executing ")
-         << cur->name() << std::endl;
+      debug_output( std::string("Executing ") + cur->name() );
    }
    cur->run_run();
 

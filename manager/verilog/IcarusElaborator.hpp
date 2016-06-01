@@ -51,6 +51,7 @@ class IcarusElaborator : public virtual Elaborator, public virtual IcarusHandler
       ///> in its interface.
       std::map<const std::string, ModuleInterface> modules_;
 
+      void debug_output( const std::string& ) const;
       ModuleSpec* create_spec( const PGModule*, NetScope* );
       ModuleSpec* continue_elaboration( ModuleInstance* );
       ModuleSpec* start_elaboration();

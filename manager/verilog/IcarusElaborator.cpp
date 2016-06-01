@@ -94,20 +94,23 @@ IcarusElaborator::emit_code() {
       assert(des_);
       des_->set_flags(f_);
       if (debug_elaborate) {
-         cerr << "<Icarus>: elaborate: "
-            " Start code generation" << endl;
+         debug_output( "Start code generation" );
       }
       return des_->emit(&dll_target_obj) || emit_mixed_file();
    }
    return 1;
 }
 
+inline void
+IcarusElaborator::debug_output( const std::string& output ) const {
+   std::cerr << "<Icarus>: elaborate: " << output << "." << std::endl;
+}
+
 bool
 IcarusElaborator::can_continue() const {
    if( !missing_modules.empty() || !missing_specs.empty() ) {
       if (debug_elaborate) {
-         cerr << "<Icarus>: elaborate: "
-            " I can not continue with code generation" << endl;
+         debug_output( "I can not continue with code generation" );
       }
       return false;
    }
@@ -122,8 +125,7 @@ IcarusElaborator::create_spec( const PGModule* mod, NetScope* scope ) {
    assert( pform_modules.find(scope->module_name())->second->get_gate(mod->get_name()) );
 
    if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate:  Create spec for "
-         << mod->get_type() << "." << endl;
+      debug_output( std::string("Create spec for ") + mod->get_type().str() );
    }
 
    StringHeapLex lex_strings;
@@ -147,9 +149,8 @@ IcarusElaborator::create_spec( const PGModule* mod, NetScope* scope ) {
 ModuleInstance*
 IcarusElaborator::create_instance( ModuleSpec& spec ) {
    if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         << " Create an instance for the spec " << spec.name()
-         << endl;
+      debug_output( std::string("Create an instance for the spec ")
+                 + spec.name() );
    }
    StringHeapLex lex_strings;
    perm_string cur_name = lex_strings.make( spec.name().c_str() );
@@ -202,9 +203,9 @@ IcarusElaborator::create_instance( ModuleSpec& spec ) {
 ElabResult*
 IcarusElaborator::instantiate( ModuleSpec& spec ) {
    if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         << " Received the spec " << spec.name()
-         << " for instantiation." << endl;
+      debug_output( std::string("Received the spec ")
+              + spec.name()
+              + " for instantiation" );
    }
    StringHeapLex lex_strings;
    perm_string cur_name = lex_strings.make( spec.name().c_str() );
@@ -278,10 +279,10 @@ IcarusElaborator::start_elaboration() {
       // Look for the root module in the list.
       map<perm_string,Module*>::const_iterator mod = pform_modules.find(root);
       if (mod == pform_modules.end()) {
-         cerr << "error: Unable to find the root module \""
-            << (*root) << "\" in the Verilog source." << endl;
-         cerr << "     : Perhaps ``-s " << (*root)
-            << "'' is incorrect?" << endl;
+         debug_output( std::string("error: Unable to find the root module \"")
+                      + root.str() + "\" in the Verilog source.\n"
+                      + "     : Perhaps ``-s " + root.str()
+                      + "'' is incorrect?" );
          des_->errors++;
          continue;
       }
@@ -351,8 +352,7 @@ IcarusElaborator::start_elaboration() {
    }
 
    if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         << "elaboration work list done. Start processing residual defparams." << endl;
+      debug_output( "elaboration work list done. Start processing residual defparams" );
    }
 
    // Look for residual defparams (that point to a non-existent
@@ -451,8 +451,7 @@ IcarusElaborator::continue_elaboration( ModuleInstance* ) {
    bool rc = true;
 
    if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         << "Start calling Package elaborate_sig methods." << endl;
+      debug_output( "Start calling Package elaborate_sig methods" );
    }
 
    // With the parameters evaluated down to constants, we have
@@ -465,28 +464,21 @@ IcarusElaborator::continue_elaboration( ModuleInstance* ) {
 
       if (! pack->elaborate_sig(des_, scope)) {
          if (debug_elaborate) {
-            cerr << "<Icarus>" << ": debug: " << pack->pscope_name()
-               << ": elaborate_sig failed!!!" << endl;
+            debug_output( std::string(pack->pscope_name())
+                          + ": elaborate_sig failed" );
          }
          return nullptr;
       }
    }
 
    if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         << "Start calling $root elaborate_sig methods." << endl;
+      debug_output( "Start calling $root elaborate_sig methods" );
    }
 
    des_->root_elaborate_sig();
 
    if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         << "Check wheter there are missing modules." << endl;
-   }
-
-   if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         << "Start calling root module elaborate_sig methods." << endl;
+      debug_output( "Start calling root module elaborate_sig methods" );
    }
 
    for( const auto& elem : root_elems_ ) {
@@ -495,15 +487,16 @@ IcarusElaborator::continue_elaboration( ModuleInstance* ) {
       scope->set_num_ports( rmod->port_count() );
 
       if (debug_elaborate) {
-         cerr << "<Icarus>" << ": debug: " << rmod->mod_name()
-            << ": port elaboration root "
-            << rmod->port_count() << " ports" << endl;
+         debug_output( std::string(rmod->mod_name())
+                      + ": port elaboration root "
+                      + std::to_string(rmod->port_count())
+                      + " ports" );
       }
 
       if (! rmod->elaborate_sig(des_, scope)) {
          if (debug_elaborate) {
-            cerr << "<Icarus>" << ": debug: " << rmod->mod_name()
-               << ": elaborate_sig failed!!!" << endl;
+            debug_output( std::string(rmod->mod_name())
+                         + ": elaborate_sig failed" );
          }
          return nullptr;
       }
@@ -527,9 +520,9 @@ IcarusElaborator::continue_elaboration( ModuleInstance* ) {
             }
          }
          if (debug_elaborate) {
-            cerr << "<Icarus>" << ": debug: " << rmod->mod_name()
-               << ": adding module port "
-               << rmod->get_port_name(idx) << endl;
+            debug_output( std::string(rmod->mod_name())
+               + ": adding module port "
+               + rmod->get_port_name(idx).str() );
          }
          scope->add_module_port_info(idx, rmod->get_port_name(idx), ptype, prt_vector_width );
       }
@@ -564,19 +557,9 @@ IcarusElaborator::continue_elaboration( ModuleInstance* ) {
    }
 
    if (debug_elaborate) {
-      cerr << "<Icarus>" << ": debug: "
-         << " finishing with "
-         <<  des_->find_root_scopes().size() << " root scopes " << endl;
-   }
-
-   if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         " End of the scope elaboration of the new instance " << endl;
-   }
-
-   if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         " End of the elaboration of the new instance " << endl;
+      debug_output( std::string("Finishing with ")
+         +  std::to_string(des_->find_root_scopes().size())
+         + " root scopes" );
    }
 
    return nullptr;
@@ -586,30 +569,26 @@ ModuleSpec*
 IcarusElaborator::elaborate( ModuleInstance* inst ) {
    if( !inst ) {
       if( !roots.empty() ) {
-         if (debug_elaborate) {
-            cerr << "<Icarus>: elaborate: "
-               " Start elaboration." << endl;
+         if( debug_elaborate ) {
+            debug_output( "Start elaboration" );
          }
          add_vpi_module( "system" );
          return start_elaboration();
       } else {
-         if (debug_elaborate) {
-            cerr << "<Icarus>: elaborate: "
-               " Not a root module." << endl;
+         if( debug_elaborate ) {
+            debug_output( "Not a root module" );
          }
          return nullptr;
       }
    }
-   if (debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         " Provided an instance to complete elaboration." << endl;
+   if( debug_elaborate ) {
+      debug_output( "Provided an instance to complete elaboration" );
    }
    StringHeapLex lex_strings;
    const perm_string provided = lex_strings.make( inst->iface()->name().c_str() );
    if( missing_specs.find( provided ) == missing_specs.end() ) {
-      if (debug_elaborate) {
-         cerr << "<Icarus>: elaborate: "
-            " The instance provided was not required." << endl;
+      if( debug_elaborate ) {
+         debug_output( "The instance provided was not required" );
       }
       return nullptr;
    }

@@ -240,6 +240,7 @@ class __vpiScope : public __vpiHandle {
       char* vpi_get_str(int code);
       vpiHandle vpi_handle(int code);
       vpiHandle vpi_iterate(int code);
+      __vpiScope* find_recursively(const std::string&);
 
     public:
 	// Return the BASE name of the scope. This does not include

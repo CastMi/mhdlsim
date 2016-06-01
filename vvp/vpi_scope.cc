@@ -334,6 +334,22 @@ __vpiScope::__vpiScope(const char*nam, const char*tnam, bool auto_flag)
       tname_ = vpip_name_string(tnam? tnam : "");
 }
 
+__vpiScope* __vpiScope::find_recursively(const std::string& name)
+{
+   if( !name.compare( scope_name() ) )
+      return this;
+   __vpiScope* ret_val = nullptr;
+   for( auto it = intern.begin();
+         !ret_val && it != intern.end();
+         ++it ) {
+      __vpiScope* instance = dynamic_cast<__vpiScope*>(*it);
+      if( !instance )
+         continue;
+      ret_val = instance->find_recursively(name);
+   }
+   return ret_val;
+}
+
 int __vpiScope::vpi_get(int code)
 {
       switch (code) {

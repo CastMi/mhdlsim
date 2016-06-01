@@ -17,14 +17,17 @@
  */
 
 #include "manager.h"
+#include "sim_result.hpp"
+#include "elab_result.hpp"
+#include "net.h"
 #include <iostream>
+#include <string>
 #include <stack>
 
 Manager::Manager() :
    current_comp_(nullptr),
    current_step_(CompilerStep::ANALYSIS) {}
-
-Manager::~Manager() {};
+   Manager::~Manager() {};
 
 inline std::ostream&
 operator<<(std::ostream& os, const CompilerStep& step) {
@@ -64,8 +67,8 @@ operator<<(std::ostream& os, const Compiler::Type& type) {
 void
 Manager::add_instance(Compiler::Type type, Compiler* comp) {
    assert( comp );
-   for( auto it = instances_.begin(); it != instances_.end(); ++it ) {
-      assert( type != it->second );
+   for( const auto& it : instances_ ) {
+      assert( type != it.second );
    }
    instances_[comp] = type;
 }
@@ -82,32 +85,33 @@ Manager::error_message( const std::string& errormsg ) const {
 
 bool
 Manager::set_variable( sim_time_t& min ) {
-   bool other_events = false;
    std::vector<Compiler*> tie;
-   min = Compiler::maxSimValue();
-   for( auto it = instances_.begin(); it != instances_.end(); ++it ) {
-      other_events |= it->first->other_event();
-      if( min > it->first->next_event() ) {
-         current_comp_ = it->first;
-         min = it->first->next_event();
+   min = Simulator::maxSimValue();
+   for( const auto& it : instances_ ) {
+      if( !it.first->other_event() ) {
+         continue;
+      }
+      if( min > it.first->next_event() ) {
+         current_comp_ = it.first;
+         min = it.first->next_event();
          tie.erase(tie.begin(), tie.end());
       }
-      else if( min == it->first->next_event() ) {
-         tie.push_back(it->first);
+      else if( min == it.first->next_event() ) {
+         tie.push_back(it.first);
       }
    }
-   if( other_events && !tie.empty() ) {
+   if( min != Simulator::maxSimValue() && !tie.empty() ) {
       // TODO: Break the tie...for the moment it can be left like that.
    }
-   return other_events;
+   return min != Simulator::maxSimValue();
 }
 
 int
 Manager::do_simulation() {
    int res = 0;
 
-   for( auto it = instances_.begin(); it != instances_.end(); ++it ) {
-      current_comp_ = it->first;
+   for( const auto& it : instances_ ) {
+      current_comp_ = it.first;
       res = current_comp_->initialize();
       if( res ) {
          error_message( "initialization failed" );
@@ -119,33 +123,55 @@ Manager::do_simulation() {
    // For the time being the timestamp is an unsigned long long.
    // If we change the definition we should take care of defining a zero element.
    sim_time_t min;
-   Simulator::outcome result = Simulator::OK;
+   SimResult* current_result = nullptr;
+   bool abc = true;
    while( set_variable(min) ) {
-      result = current_comp_->step_event();
-      switch( result ) {
-         case Simulator::OK:
+      current_result = current_comp_->step_event();
+      assert(current_result);
+      switch( current_result->result() ) {
+         case SimResult::OK:
+            {
             // Do nothing
+            // This if FAKES a signal change
+            if(abc) {
+               abc = false;
+               Net* abc = new Net("ci", "fictious");
+               current_comp_->notify(abc);
+            }
+            }
             break;
-         case Simulator::ERROR:
+         case SimResult::CHANGED:
+            {
+               auto& changed_sigs = current_result->changed_sigs;
+               for( const auto& compiler : instances_ ) {
+                  if( compiler.first == current_comp_ )
+                     continue;
+                  //for( const auto& abc : *changed_sigs )
+                  //   compiler.first->notify(abc);
+               }
+            }
+            break;
+         case SimResult::ERROR:
             error_message( "At time " + min );
-            return 1;
-            break;
-         case Simulator::CHANGED:
-            // TODO: advice the other simulators
+            res = 1;
             break;
          default:
             error_message( "Function step_event() returned a wrong value" );
-            return 1;
+            res = 1;
             break;
       }
+      delete current_result;
+      current_result = nullptr;
+      if( res )
+         return res;
    }
    return 0;
 }
 
 void
 Manager::end_simulation() {
-   for( auto it = instances_.begin(); it != instances_.end(); ++it ) {
-      current_comp_ = it->first;
+   for( const auto& it : instances_ ) {
+      current_comp_ = it.first;
       current_comp_->end_simulation();
    }
 }
@@ -154,8 +180,8 @@ int
 Manager::do_analysis() {
    int res = 0;
 
-   for( auto it = instances_.begin(); it != instances_.end(); ++it ) {
-      current_comp_ = it->first;
+   for( const auto& it : instances_ ) {
+      current_comp_ = it.first;
       res = current_comp_->analyze();
       if( res ) {
          error_message();
@@ -179,8 +205,8 @@ Manager::elaborate( ModuleInstance* mod_inst ) {
    int res = 0;
    std::stack<ModuleSpec*> look_for;
 
-   for( auto it = instances_.begin(); it != instances_.end(); ++it ) {
-      current_comp_ = it->first;
+   for( const auto& it : instances_ ) {
+      current_comp_ = it.first;
       ModuleSpec* tmp = current_comp_->elaborate( mod_inst );
       if( tmp )
          look_for.push( tmp );
@@ -192,25 +218,31 @@ Manager::elaborate( ModuleInstance* mod_inst ) {
          return 1;
       }
       avoid_endless = look_for.top();
-      for( auto it = instances_.begin(); it != instances_.end(); ++it ) {
-         current_comp_ = it->first;
-         switch( current_comp_->instantiate( *avoid_endless ) ) {
-            case Elaborator::FOUND:
+      for( const auto& it : instances_ ) {
+         current_comp_ = it.first;
+         ElabResult* current_res = current_comp_->instantiate( *avoid_endless );
+         switch( current_res->result() ) {
+            case ElabResult::FOUND:
                {
                   look_for.pop();
-                  // Here I should save the something for fast retrieve
-                  res = elaborate( current_comp_->get_instance() );
+                  res = elaborate( current_res->get_instance() );
                   if ( res ) {
                      add_not_found(avoid_endless->name());
-                     return res;
                   }
+                  delete avoid_endless;
+                  avoid_endless = nullptr;
                   break;
                }
-            case Elaborator::NOT_FOUND:
+            case ElabResult::NOT_FOUND:
                break;
-            case Elaborator::NEED_ANOTHER:
-               look_for.push( current_comp_->get_spec() );
+            case ElabResult::NEED_ANOTHER:
+               look_for.push( current_res->get_spec() );
                break;
+         }
+         delete current_res;
+         current_res = nullptr;
+         if ( res ) {
+            return res;
          }
       }
    }
@@ -223,7 +255,7 @@ Manager::do_elaboration() {
    int res = elaborate();
 
    if( res ) {
-      if ( !not_found_.empty() ) {
+      if( !not_found_.empty() ) {
          error_message( "Not able to find " + not_found_ );
       } else {
          error_message();
@@ -233,8 +265,8 @@ Manager::do_elaboration() {
    assert(not_found_.empty());
 
    // Can we go ahead?
-   for( auto it = instances_.begin(); it != instances_.end(); ++it ) {
-      current_comp_ = it->first;
+   for( const auto& it : instances_ ) {
+      current_comp_ = it.first;
       if ( !current_comp_->can_continue() )
          break;
    }
@@ -244,8 +276,8 @@ Manager::do_elaboration() {
       return 1;
    }
    // Emit code
-   for( auto it = instances_.begin(); it != instances_.end(); ++it ) {
-      current_comp_ = it->first;
+   for( const auto& it : instances_ ) {
+      current_comp_ = it.first;
       res = current_comp_->emit_code();
       if( res ) {
          error_message("In emit_code()");

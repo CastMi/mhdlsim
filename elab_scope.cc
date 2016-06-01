@@ -973,6 +973,7 @@ bool Module::elaborate_scope(Design*des, NetScope*scope,
       return des->errors == 0;
 }
 
+/*
 bool FakeModule::elaborate_scope(Design*des, NetScope*scope,
 			     const replace_t&replacements)
 {
@@ -983,6 +984,7 @@ bool FakeModule::elaborate_scope(Design*des, NetScope*scope,
 
       return des->errors == 0;
 }
+*/
 
 bool PGenerate::generate_scope(Design*des, NetScope*container)
 {

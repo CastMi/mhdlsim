@@ -187,12 +187,8 @@ class FakeModule : public Module {
 
       //void dump(ostream&out) const override;
       void remove_gate( perm_string to_remove );
-      bool elaborate(Design*, NetScope*scope) const override;
 
-      typedef map<perm_string,PExpr*> replace_t;
-      bool elaborate_scope(Design*, NetScope*scope, const replace_t&rep) override;
-
-      //bool elaborate_sig(Design*, NetScope*scope) const override;
+      //bool elaborate_scope(Design*, NetScope*scope, const replace_t&rep) override;
 
     private: // Not implemented
       FakeModule(const FakeModule&);

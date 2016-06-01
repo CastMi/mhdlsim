@@ -5679,11 +5679,6 @@ bool Module::elaborate(Design*des, NetScope*scope) const
       return result_flag;
 }
 
-bool FakeModule::elaborate(Design*des, NetScope*scope) const
-{
-      return true;
-}
-
 /*
  * Elaborating a netclass_t means elaborating the PFunction and PTask
  * objects that it contains. The scopes and signals have already been

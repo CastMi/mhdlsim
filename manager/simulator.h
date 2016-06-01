@@ -25,14 +25,10 @@
 typedef unsigned long long sim_time_t;
 
 class Net;
+struct SimResult;
 
 class Simulator {
 public:
-    /* CHANGED means that the input of a module that the simulator instance does not handle has changed and therefore the other simulator need to be adviced
-     * OK the step went fine and the manager can decide what to do afterwards
-     * ERROR something went terribly wrong. Need to exit.
-     */
-    enum outcome { OK, CHANGED, ERROR };
     static constexpr sim_time_t maxSimValue() { return std::numeric_limits<sim_time_t>::max(); };
     static constexpr sim_time_t minSimValue() { return std::numeric_limits<sim_time_t>::min(); };
     Simulator() {};
@@ -48,13 +44,13 @@ public:
      * @brief Notifies the simulator that a net value has changed.
      * @param net is the net which value has just changed.
      */
-    virtual void notify( Net* ) = 0;
+    virtual void notify( const Net* ) = 0;
 
     /**
      * @brief Executes the next event from the event queue.
      * @return 0 if success. Non zero value in case of failure.
      */
-    virtual outcome step_event() = 0;
+    virtual SimResult* step_event() = 0;
 
     /**
      * @brief If some tasks need to be executed after simulation,
@@ -84,8 +80,9 @@ public:
      * @brief Advances the simulation by time. All events in the queue will be
      * executed.
      * @param time is the amount of time for advancement.
+     * **WARNING:** the returned value will be deleted.
      */
-    virtual int advance_time( sim_time_t ) = 0;
+    virtual SimResult* advance_time( const sim_time_t ) = 0;
 
 protected:
     // TODO maybe one day an interface to call subprograms? surely not for

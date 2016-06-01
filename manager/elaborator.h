@@ -23,49 +23,33 @@
 #include "handler.h"
 #include <map>
 
+struct ElabResult;
+
 class Elaborator : public virtual FileParamHandler {
 public:
-    Elaborator() :
-       spec_to_find_(nullptr),
-       instance_found_(nullptr) {};
+    Elaborator() {};
     virtual ~Elaborator() {};
-
-    enum result { NOT_FOUND, FOUND, NEED_ANOTHER };
 
     /**
      * @brief Complete the elaboration.
      * @param module module/architecture needed to continue the elaboration.
      * @return unknown module/architecture discovered during elaboration.
-     * NULL in any other case.
+     *         NULL in any other case.
+     * **WARNING:** the returned value will be deleted.
      */
     virtual ModuleSpec* elaborate(ModuleInstance* module = nullptr) = 0;
-
-    ModuleInstance* get_instance() {
-       ModuleInstance* tmp = instance_found_;
-       if( instance_found_ ) {
-          instance_found_ = nullptr;
-       }
-       return tmp;
-    };
-
-    ModuleSpec* get_spec() {
-       ModuleSpec* tmp = spec_to_find_;
-       if( spec_to_find_ ) {
-          spec_to_find_ = nullptr;
-       }
-       return tmp;
-    };
 
     /**
      * @brief True if there are no internal problems. False otherwise.
      * Waiting for an Instance to complete the elaboration has to return
      * false
      */
-    virtual bool can_continue() = 0;
+    virtual bool can_continue() const = 0;
 
     /**
      * @brief Emit code for the simulation.
      * If something went wrong in the elaboration phase, do nothing.
+     * @return 0 if success. Non zero value in case of failure.
      */
     virtual int emit_code() = 0;
 
@@ -73,12 +57,9 @@ public:
      * @brief Creates an instance with the given spec.
      * @param iface interface of the the instance to create.
      * @return the created instance.
+     * **WARNING:** the returned value will be deleted.
      */
-    virtual result instantiate(ModuleSpec& iface) = 0;
-
-protected:
-    ModuleSpec* spec_to_find_;
-    ModuleInstance* instance_found_;
+    virtual ElabResult* instantiate(ModuleSpec& iface) = 0;
 
 };
 

@@ -71,10 +71,6 @@ private:
     ///> Instances of simulators to manage.
     std::map<Compiler*, Compiler::Type> instances_;
 
-    ///> Keep list of modules that have to be notified
-    ///> when a particular signal changes.
-    std::map<Net*, std::list<ModuleInstance*> > sensitivity_;
-
     ///> Currently active Compiler (i.e. executing code)
     Compiler* current_comp_;
 

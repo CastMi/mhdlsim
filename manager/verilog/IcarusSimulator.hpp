@@ -29,16 +29,16 @@ class event_s;
 class IcarusSimulator : public virtual Simulator {
    static_assert( std::numeric_limits<sim_time_t>::is_integer, "sim_time_t is not an integer type" );
    static_assert( !std::numeric_limits<sim_time_t>::is_signed, "sim_time_t is signed" );
-   static_assert( sizeof(sim_time_t) >= sizeof(vvp_time64_t), "sim_time_t to vvp_time64_t conversion assumption is not met" );
+   static_assert( sizeof(sim_time_t) >= sizeof(vvp_time64_t), "sim_time_t to vvp_time64_t conversion assumption is not satisfied" );
    public:
       IcarusSimulator();
       virtual ~IcarusSimulator();
 
       virtual int initialize();
 
-      virtual void notify(Net* );
+      virtual void notify( const Net* );
 
-      virtual outcome step_event();
+      virtual SimResult* step_event();
 
       virtual bool other_event();
 
@@ -48,12 +48,11 @@ class IcarusSimulator : public virtual Simulator {
 
       virtual void end_simulation();
 
-      virtual int advance_time(sim_time_t );
+      virtual SimResult* advance_time( const sim_time_t );
 
    private:
-      vvp_time64_t schedule_time;
-      unsigned module_cnt;
-      const char*module_tab[64];
+      // Members
+      vvp_time64_t schedule_time_;
 };
 
 #endif /* ICARUSSIMULATOR_H */

@@ -32,6 +32,8 @@
 using std::cerr;
 
 #define VVP_INPUT "myoutput"
+#define MIXED_FILENAME "mixed_file"
+
 extern vector<const char *> file_names;
 bool have_ivl_version;
 // TODO: to assign
@@ -42,10 +44,14 @@ extern struct event_time_s* sched_list;
 extern struct event_s* schedule_init_list;
 
 IcarusSimulator::IcarusSimulator() {};
-IcarusSimulator::~IcarusSimulator() {};
+IcarusSimulator::~IcarusSimulator() {
+   if( mix.is_open() )
+      mix.close();
+};
 
 int
 IcarusSimulator::initialize() {
+   read_mixed();
    vpip_mcd_init( NULL );
    vpi_mcd_printf(1, "Compiling VVP ...\n");
    vvp_vpi_init();
@@ -82,6 +88,34 @@ IcarusSimulator::initialize() {
    sim_started = true;
    return 0;
 };
+
+int
+IcarusSimulator::read_mixed() {
+   mix.open(MIXED_FILENAME, std::fstream::in);
+   std::string tmp;
+   std::string scope_name;
+   for( std::getline( mix, tmp );
+         !mix.eof();
+         std::getline( mix, tmp ) ) {
+      tmp.erase(0, tmp.find_first_not_of(' '));
+      tmp.erase(tmp.find_last_of(';'));
+      std::size_t divider = tmp.find_first_of(' ');
+      if( divider != std::string::npos ) {
+         assert(tmp.find("scope") != std::string::npos);
+         scope_name = tmp.substr( divider + 1 );
+         tmp.clear();
+      } else {
+         assert(!scope_name.empty()); 
+         instances[ scope_name ].push_back( tmp );
+         debug_output( std::string("We are now tracing ")
+               + scope_name
+               + "."
+               + tmp );
+      }
+   }
+   mix.close();
+   return 0;
+}
 
 bool
 IcarusSimulator::other_event() {

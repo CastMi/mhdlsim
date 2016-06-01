@@ -23,6 +23,7 @@
 #include "IcarusHandler.hpp"
 #include "elaborator.h"
 #include "netlist.h"
+#include <fstream>
 
 class PGModule;
 class Module;
@@ -68,6 +69,8 @@ class IcarusElaborator : public virtual Elaborator, public virtual IcarusHandler
       ///> is the name of an instance, not the name of the module.
       std::map<const std::string, std::vector<std::string>> instances_;
    private:
+      int emit_mixed_file();
+      std::fstream mix;
       vector<struct root_elem> root_elems_;
       vector<struct pack_elem> pack_elems_;
       std::map<std::string, std::vector<std::string> > mixed_borders_;

@@ -36,6 +36,7 @@
 #include "vpi_priv.h"
 
 #define VVP_INPUT "myoutput"
+#define MIXED_FILENAME "mixed_file"
 
 extern std::map<perm_string, PPackage*> pform_packages;
 extern std::map<perm_string, unsigned> missing_modules;
@@ -62,7 +63,22 @@ IcarusElaborator::~IcarusElaborator() {
       delete des_;
       des_ = nullptr;
    }
+   if( mix.is_open() )
+      mix.close();
 };
+
+int
+IcarusElaborator::emit_mixed_file() {
+   mix.open(MIXED_FILENAME, std::fstream::out | std::fstream::trunc);
+   for( const auto& it_ext : mixed_borders_ ) {
+      mix << "scope " << it_ext.first << ";" << std::endl;
+      for( const auto& it_int : it_ext.second ) {
+         mix << it_int << ";" << std::endl;
+      }
+   }
+   mix.close();
+   return 0;
+}
 
 int
 IcarusElaborator::emit_code() {
@@ -76,7 +92,7 @@ IcarusElaborator::emit_code() {
          cerr << "<Icarus>: elaborate: "
             " Start code generation" << endl;
       }
-      return des_->emit(&dll_target_obj);
+      return des_->emit(&dll_target_obj) || emit_mixed_file();
    }
    return 1;
 }

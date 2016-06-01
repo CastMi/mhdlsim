@@ -21,6 +21,7 @@
 
 #include "vvp_config.h"
 #include "simulator.h"
+#include <fstream>
 #include <type_traits>
 #include <limits>
 
@@ -51,8 +52,11 @@ class IcarusSimulator : public virtual Simulator {
       virtual SimResult* advance_time( const sim_time_t );
 
    private:
+      // Methods
+      int read_mixed();
       // Members
       vvp_time64_t schedule_time_;
+      std::fstream mix;
 };
 
 #endif /* ICARUSSIMULATOR_H */

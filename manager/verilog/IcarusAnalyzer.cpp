@@ -57,7 +57,7 @@ IcarusAnalyzer::analyze() {
 
    // Preprocessor
    reset_lexor( pp_out, file_list );
-   int result = yylex();
+   unsigned result = yylex();
    if ( result ) {
       std::cerr << "An error occured with yylex(). Abort!" << std::endl;
       cleanup( file_list );
@@ -78,7 +78,7 @@ IcarusAnalyzer::analyze() {
    return 0;
 }
 
-void
+inline void
 IcarusAnalyzer::cleanup(char ** file_list) {
    for( unsigned i = 0; i < files_.size(); ++i )
       free( file_list[i] );

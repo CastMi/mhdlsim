@@ -45,7 +45,9 @@ static unsigned current_within_chunk = 0;
  */
 void codespace_init(void)
 {
-      assert(current_chunk == 0);
+      if(!current_chunk) {
+         current_chunk = 0;
+      }
       first_chunk = new struct vvp_code_s [code_chunk_size];
       current_chunk = first_chunk;
 

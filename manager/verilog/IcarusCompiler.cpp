@@ -21,4 +21,3 @@
 IcarusCompiler::IcarusCompiler() {}
 
 IcarusCompiler::~IcarusCompiler() {}
-

@@ -208,14 +208,14 @@ ArgumentParser::checkFiles( std::vector<std::string>& files ) {
          ++it;
    }
 
-   if( files.size() > 0 ) {
+   if( !files.empty() ) {
       std::cerr << "There is at least one parameter which is not a Verilog or VHDL file." << std::endl
          << "Please, make sure that the extensions are correct:" << std::endl
          << ".v for Verilog files and either .vhdl or .vhd for VHDL files." << std::endl;
       return false;
    }
 
-   assert( files.size() == 0 );
+   assert( files.empty() );
    return true;
 }
 

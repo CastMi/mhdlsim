@@ -28,7 +28,6 @@
  * This defines constants and defaults for the compiler in general.
  */
 
-
 /*
  * The integer_width is the width of integer variables. This is also
  * the minimum width of unsized integers when they are found in

@@ -17,9 +17,11 @@
  */
 
 #include "IcarusElaborator.hpp"
+#include "elab_result.hpp"
 #include <vector>
 #include <list>
 #include <cstring>
+#include <string>
 #include "net.h"
 #include "StringHeap.h"
 #include "PPackage.h"
@@ -49,15 +51,18 @@ std::map<perm_string, std::pair<const PGModule*,NetScope*>> missing_specs;
 std::map<perm_string, Module*> fake_modules;
 
 IcarusElaborator::IcarusElaborator()
-   : des_(new Design) {
+   : root_elems_(),
+   pack_elems_(),
+   mixed_borders_(),
+   f_(),
+   vpi_module_list_(nullptr) {
       // FIXME: temporary hard-coded paths
-      f["DLL"] = "/usr/local/lib/ivl/vvp.tgt";
-      f["VVP_EXECUTABLE"] = "/usr/local/bin/vvp";
-      f["-o"] = VVP_INPUT ;
+      f_["DLL"] = "/usr/local/lib/ivl/vvp.tgt";
+      f_["VVP_EXECUTABLE"] = "/usr/local/bin/vvp";
+      f_["-o"] = VVP_INPUT ;
       vpip_module_path[0] = "/usr/local/lib/ivl";
       ++vpip_module_path_cnt;
-   };
-
+};
 IcarusElaborator::~IcarusElaborator() {
    if(des_) {
       delete des_;
@@ -87,7 +92,7 @@ IcarusElaborator::emit_code() {
       // the set_flag but at least I am sure it will be executed
       // at the end of the elaboration
       assert(des_);
-      des_->set_flags(f);
+      des_->set_flags(f_);
       if (debug_elaborate) {
          cerr << "<Icarus>: elaborate: "
             " Start code generation" << endl;
@@ -98,7 +103,7 @@ IcarusElaborator::emit_code() {
 }
 
 bool
-IcarusElaborator::can_continue() {
+IcarusElaborator::can_continue() const {
    if( !missing_modules.empty() || !missing_specs.empty() ) {
       if (debug_elaborate) {
          cerr << "<Icarus>: elaborate: "
@@ -124,7 +129,7 @@ IcarusElaborator::create_spec( const PGModule* mod, NetScope* scope ) {
    StringHeapLex lex_strings;
    ModuleSpec* return_val = new ModuleSpec( std::string( mod->get_type() ),
          std::string( mod->get_name() ) );
-   for( int i = 0; i < mod->pin_count(); ++i ) {
+   for( unsigned i = 0; i < mod->pin_count(); ++i ) {
       PExpr* name = mod->pin(i);
       assert( name );
       assert( dynamic_cast<PEIdent*>( name ) );
@@ -139,7 +144,7 @@ IcarusElaborator::create_spec( const PGModule* mod, NetScope* scope ) {
    return return_val;
 }
 
-bool
+ModuleInstance*
 IcarusElaborator::create_instance( ModuleSpec& spec ) {
    if (debug_elaborate) {
       cerr << "<Icarus>: elaborate: "
@@ -148,6 +153,7 @@ IcarusElaborator::create_instance( ModuleSpec& spec ) {
    }
    StringHeapLex lex_strings;
    perm_string cur_name = lex_strings.make( spec.name().c_str() );
+   ModuleInstance* instance_found = nullptr;
    // FIXME: the if is here just for debugging purposes
    // It should be replace by:
    // if( pform_modules.find(cur_name) == pform_modules.end() ) {
@@ -162,7 +168,7 @@ IcarusElaborator::create_instance( ModuleSpec& spec ) {
    }
    // create a new scope to handle the instance
    //NetScope*scope = des_->make_root_scope( lex_strings.make(spec.name()), module->program_block, module->is_interface);
-   instance_found_ = new ModuleInstance( &spec );
+   instance_found = new ModuleInstance( &spec );
    // FIXME: we should do some checks here
    /*
       for( auto it = spec.ports().begin(); it != spec.ports().end(); ++it ) {
@@ -190,12 +196,10 @@ IcarusElaborator::create_instance( ModuleSpec& spec ) {
    }
    }
    */
-   //elaborate_root_scope_t help_call(des_, scope, module);
-   //help_call.elaborate_runrun();
-   return true;
+   return instance_found;
 }
 
-Elaborator::result
+ElabResult*
 IcarusElaborator::instantiate( ModuleSpec& spec ) {
    if (debug_elaborate) {
       cerr << "<Icarus>: elaborate: "
@@ -208,10 +212,8 @@ IcarusElaborator::instantiate( ModuleSpec& spec ) {
       // Elaboration has never started
       roots.push_back( lex_strings.make( cur_name ) );
       ModuleSpec* tmp = start_elaboration();
-      if( tmp ) {
-         spec_to_find_ = tmp;
-         return NEED_ANOTHER;
-      }
+      if( tmp )
+         return new ElabResult( tmp );
    }
    // FIXME: The following if is here
    // just for testing purposes...TO REMOVE
@@ -220,31 +222,32 @@ IcarusElaborator::instantiate( ModuleSpec& spec ) {
       assert(tmp);
    }
    // If there was a problem in the instance creation, return a NOT_FOUND
-   if ( !create_instance( spec ) )
-      return NOT_FOUND;
-   assert( instance_found_ );
-   return FOUND;
+   ModuleInstance* found = create_instance( spec );
+   if ( !found )
+      return new ElabResult();
+   return new ElabResult(found);
 }
 
 void
 IcarusElaborator::add_vpi_module( const char* name ) {
-   if (vpi_module_list == 0) {
-      vpi_module_list = strdup(name);
+   if (vpi_module_list_ == 0) {
+      vpi_module_list_ = strdup(name);
    } else {
-      char*tmp = (char*)realloc(vpi_module_list,
-            strlen(vpi_module_list)
+      char*tmp = (char*)realloc(vpi_module_list_,
+            strlen(vpi_module_list_)
             + strlen(name)
             + 2);
       strcat(tmp, ",");
       strcat(tmp, name);
-      vpi_module_list = tmp;
+      vpi_module_list_ = tmp;
    }
-   f["VPI_MODULE_LIST"] = vpi_module_list;
+   f_["VPI_MODULE_LIST"] = vpi_module_list_;
 }
 
 ModuleSpec*
 IcarusElaborator::start_elaboration() {
    assert( !roots.empty() );
+   des_ = new Design;
 
    // Elaborate enum sets in $root scope.
    elaborate_rootscope_enumerations(des_);
@@ -257,28 +260,23 @@ IcarusElaborator::start_elaboration() {
 
    // Elaborate the packages. Package elaboration is simpler
    // because there are fewer sub-scopes involved.
-   unsigned i = 0;
-   for (map<perm_string,PPackage*>::iterator pac = pform_packages.begin()
-         ; pac != pform_packages.end() ; ++ pac) {
+   for( const auto& pac : pform_packages ) {
 
-      //assert(*pac->second, pac->first == pac->second->pscope_name());
-      NetScope*scope = des_->make_package_scope(pac->first);
-      scope->set_line(pac->second);
+      //assert(pac.second, pac.first == pac.second->pscope_name());
+      NetScope*scope = des_->make_package_scope(pac.first);
+      scope->set_line(pac.second);
 
-      elaborator_work_item_t*es = new elaborate_package_t(des_, scope, pac->second);
+      elaborator_work_item_t*es = new elaborate_package_t(des_, scope, pac.second);
       des_->elaboration_work_list.push_back(es);
 
-      pack_elems.push_back( { pac->second, scope } );
-      ++i;
+      pack_elems_.push_back( { pac.second, scope } );
    }
 
    // Scan the root modules by name, and elaborate their scopes.
-   i = 0;
-   for (list<perm_string>::const_iterator root = roots.begin()
-         ; root != roots.end() ; ++ root ) {
+   for( const auto& root : roots ) {
 
       // Look for the root module in the list.
-      map<perm_string,Module*>::const_iterator mod = pform_modules.find(*root);
+      map<perm_string,Module*>::const_iterator mod = pform_modules.find(root);
       if (mod == pform_modules.end()) {
          cerr << "error: Unable to find the root module \""
             << (*root) << "\" in the Verilog source." << endl;
@@ -293,7 +291,7 @@ IcarusElaborator::start_elaboration() {
 
       // Make the root scope. This makes a NetScope object and
       // pushes it into the list of root scopes in the Design.
-      NetScope*scope = des_->make_root_scope(*root, rmod->program_block,
+      NetScope*scope = des_->make_root_scope(root, rmod->program_block,
             rmod->is_interface);
 
       // Collect some basic properties of this scope from the
@@ -306,9 +304,9 @@ IcarusElaborator::start_elaboration() {
 
 
       // Save this scope, along with its definition, in the
-      // "root_elems" list for later passes.
+      // "root_elems_" list for later passes.
       struct root_elem tmp = { rmod, scope };
-      root_elems.push_back( tmp );
+      root_elems_.push_back( tmp );
 
       // Arrange for these scopes to be elaborated as root
       // scopes. Create an "elaborate_root_scope" object to
@@ -385,26 +383,28 @@ IcarusElaborator::mod_from_spec( ModuleSpec* inst ) {
    if( fake_modules.find(provided) == fake_modules.end() ) {
       fake_modules[provided] = new FakeModule( nullptr, provided );
       ret_val = fake_modules[provided];
-      for( auto it = inst->ports().begin(); it != inst->ports().end(); ++it ) {
+      PWire *tmp = nullptr;
+      for( const auto& it : inst->ports() ) {
          // fill the port list of the module
-         perm_string cur_name = lex_strings.make( (*it)->name().c_str() );
+         perm_string cur_name = lex_strings.make( it->name().c_str() );
          ret_val->ports.push_back( pform_module_port_reference(
-                  lex_strings.make((*it)->name()),
+                  lex_strings.make(it->name()),
                   "filename", 0
                   ));
-         PWire *tmp;
-         switch( (*it)->direction() ) {
+         // Defined as Register otherwise during elaboration Icarus will
+         // attach a fake driver to drive the Z value
+         switch( it->direction() ) {
             case Port::IN:
-               tmp = new PWire( cur_name, NetNet::WIRE, NetNet::PINPUT, IVL_VT_NO_TYPE );
+               tmp = new PWire( cur_name, NetNet::IMPLICIT, NetNet::PINPUT, IVL_VT_NO_TYPE );
                break;
             case Port::OUT:
-               tmp = new PWire( cur_name, NetNet::WIRE, NetNet::POUTPUT, IVL_VT_NO_TYPE );
+               tmp = new PWire( cur_name, NetNet::IMPLICIT, NetNet::POUTPUT, IVL_VT_NO_TYPE );
                break;
             case Port::INOUT:
-               tmp = new PWire( cur_name, NetNet::WIRE, NetNet::PINOUT, IVL_VT_NO_TYPE );
+               tmp = new PWire( cur_name, NetNet::IMPLICIT, NetNet::PINOUT, IVL_VT_NO_TYPE );
                break;
             case Port::UNKNOWN:
-               tmp = new PWire( cur_name, NetNet::WIRE, NetNet::NOT_A_PORT, IVL_VT_NO_TYPE );
+               tmp = new PWire( cur_name, NetNet::IMPLICIT, NetNet::NOT_A_PORT, IVL_VT_NO_TYPE );
                break;
             default:
                break;
@@ -413,8 +413,7 @@ IcarusElaborator::mod_from_spec( ModuleSpec* inst ) {
          ret_val->wires[ cur_name ] = tmp;
          //tmp->set_wire_type(NetNet::INTEGER);
          //tmp->set_data_type();
-         tmp->set_range_scalar(SR_BOTH);
-         tmp->set_signed(true);
+         tmp->set_range_scalar(SR_PORT);
       }
    } else {
       ret_val = fake_modules[provided];
@@ -437,32 +436,20 @@ IcarusElaborator::create_and_substitute_pgmodule( ModuleInstance* inst, NetScope
    Module *father = pform_modules[scope->module_name()];
    unsigned num = father->get_gates().size();
    static_cast<FakeModule*>(father)->remove_gate(instance_name);
+   assert(father->get_gates().size() == num - 1);
    father->add_gate(instance);
    assert(father->get_gates().size() == num);
    // This will elaborate the fake module as well.
-   instance->elaborate_scope( des_, scope );
+   elaborate_root_scope_t help_call(des_, scope, father);
+   help_call.elaborate_runrun();
+   instances_[std::string(scope->fullname().peek_name().str())].push_back(inst->iface()->instance_name());
 }
 
 ModuleSpec*
-IcarusElaborator::continue_elaboration( ModuleInstance* inst ) {
+IcarusElaborator::continue_elaboration( ModuleInstance* ) {
    StringHeapLex lex_strings;
    bool rc = true;
-   if( inst ) {
-      const perm_string provided = lex_strings.make( inst->iface()->name().c_str() );
-      assert( missing_specs.find( provided ) != missing_specs.end() );
-      missing_specs.erase( missing_specs.find( provided ) );
-      if( !missing_specs.empty() ) {
-         auto it = missing_specs.begin();
-         return create_spec( (*it).second.first, (*it).second.second );
-      }
-      auto it = missing_specs.find( provided );
-      assert( it == missing_specs.end() );
-   }
 
-   if (inst && debug_elaborate) {
-      cerr << "<Icarus>: elaborate: "
-         " Continue the elaboration of the instance " << inst->iface()->instance_name() << endl;
-   }
    if (debug_elaborate) {
       cerr << "<Icarus>: elaborate: "
          << "Start calling Package elaborate_sig methods." << endl;
@@ -472,9 +459,9 @@ IcarusElaborator::continue_elaboration( ModuleInstance* inst ) {
    // what we need to elaborate signals and memories. This pass
    // creates all the NetNet and NetMemory objects for declared
    // objects.
-   for (unsigned i = 0; i < pack_elems.size(); ++i) {
-      PPackage*pack = pack_elems[i].pack;
-      NetScope*scope= pack_elems[i].scope;
+   for( const auto& elem : pack_elems_ ) {
+      PPackage*pack = elem.pack;
+      NetScope*scope = elem.scope;
 
       if (! pack->elaborate_sig(des_, scope)) {
          if (debug_elaborate) {
@@ -502,9 +489,9 @@ IcarusElaborator::continue_elaboration( ModuleInstance* inst ) {
          << "Start calling root module elaborate_sig methods." << endl;
    }
 
-   for (unsigned i = 0; i < root_elems.size(); ++i) {
-      Module *rmod = root_elems[i].mod;
-      NetScope *scope = root_elems[i].scope;
+   for( const auto& elem : root_elems_ ) {
+      Module *rmod = elem.mod;
+      NetScope *scope = elem.scope;
       scope->set_num_ports( rmod->port_count() );
 
       if (debug_elaborate) {
@@ -527,14 +514,14 @@ IcarusElaborator::continue_elaboration( ModuleInstance* inst ) {
          vector<PEIdent*> mport = rmod->get_port(idx);
          unsigned int prt_vector_width = 0;
          PortType::Enum ptype = PortType::PIMPLICIT;
-         for (unsigned pin = 0; pin < mport.size(); ++pin) {
+         for( const auto& elem : mport ) {
             // This really does more than we need and adds extra
             // stuff to the design that should be cleaned later.
-            NetNet *netnet = mport[pin]->elaborate_subport(des_, scope);
+            NetNet *netnet = elem->elaborate_subport(des_, scope);
             if (netnet != 0) {
                // Elaboration may actually fail with
                // erroneous input source
-               //assert(*mport[pin], netnet->pin_count()==1);
+               //assert(elem, netnet->pin_count()==1);
                prt_vector_width += netnet->vector_width();
                ptype = PortType::merged(netnet->port_type(), ptype);
             }
@@ -551,17 +538,17 @@ IcarusElaborator::continue_elaboration( ModuleInstance* inst ) {
    // Now that the structure and parameters are taken care of,
    // run through the pform again and generate the full netlist.
 
-   for (unsigned i = 0; i < pack_elems.size(); ++i) {
-      PPackage*pkg = pack_elems[i].pack;
-      NetScope*scope = pack_elems[i].scope;
+   for( const auto& elem : pack_elems_ ) {
+      PPackage*pkg = elem.pack;
+      NetScope*scope = elem.scope;
       rc &= pkg->elaborate(des_, scope);
    }
 
    des_->root_elaborate();
 
-   for (unsigned i = 0; i < root_elems.size(); ++i) {
-      Module *rmod = root_elems[i].mod;
-      NetScope *scope = root_elems[i].scope;
+   for( const auto& elem : root_elems_ ) {
+      Module *rmod = elem.mod;
+      NetScope *scope = elem.scope;
       rc &= rmod->elaborate(des_, scope);
    }
 
@@ -603,12 +590,8 @@ IcarusElaborator::elaborate( ModuleInstance* inst ) {
             cerr << "<Icarus>: elaborate: "
                " Start elaboration." << endl;
          }
-         add_vpi_module("system");
-         ModuleSpec* tmp = start_elaboration();
-         if( !tmp ) {
-            return continue_elaboration( nullptr );
-         }
-         return tmp;
+         add_vpi_module( "system" );
+         return start_elaboration();
       } else {
          if (debug_elaborate) {
             cerr << "<Icarus>: elaborate: "
@@ -630,19 +613,29 @@ IcarusElaborator::elaborate( ModuleInstance* inst ) {
       }
       return nullptr;
    }
-   assert ( fake_modules.find(provided) != fake_modules.end() );
-   assert ( fake_modules.find(provided)->second );
+   assert( fake_modules.find(provided) != fake_modules.end() );
+   assert( fake_modules.find(provided)->second );
    // scope of the father
    NetScope *net = nullptr;
-   for( auto it = missing_specs.begin(); it != missing_specs.end(); ++it ) {
-      if( it->first == provided ) {
-         net = it->second.second;
+   for( const auto& it : missing_specs ) {
+      if( it.first == provided ) {
+         net = it.second.second;
          break;
       }
    }
-   assert(net);
+   assert( net );
    mod_from_spec( inst->iface() );
    create_and_substitute_pgmodule( inst, net );
+   assert( missing_specs.find( provided ) != missing_specs.end() );
+   for( const auto& signal : inst->iface()->ports() )
+      mixed_borders_[net->basename().str()].push_back(signal->name()); 
+   missing_specs.erase( missing_specs.find( provided ) );
+   if( !missing_specs.empty() ) {
+      auto it = missing_specs.begin();
+      return create_spec( (*it).second.first, (*it).second.second );
+   }
+   auto it = missing_specs.find( provided );
+   assert( it == missing_specs.end() );
    return continue_elaboration( inst );
 }
 

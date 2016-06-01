@@ -37,6 +37,7 @@ struct event_s {
       struct event_s*next;
       virtual ~event_s() { }
       virtual void run_run(void) =0;
+      virtual const char* name(void) const = 0;
 
 	// Write something about the event to stderr
       virtual void single_step_display(void);
@@ -52,6 +53,7 @@ struct assign_vector4_event_s  : public event_s {
 	    base = 0;
 	    vwid = 0;
       }
+      const char* name(void) const { return "assign_vector4_event_s"; }
 
 	/* Where to do the assign. */
       vvp_net_ptr_t ptr;
@@ -109,6 +111,7 @@ struct propagate_vector4_event_s : public event_s {
       : val(that,adr,wid) {
 	    net = NULL;
       }
+      const char* name(void) const { return "propagate_vector4_event_s"; }
 
 	/* Propagate the output of this net. */
       vvp_net_t*net;
@@ -124,6 +127,7 @@ struct propagate_vector4_event_s : public event_s {
  * vvp_net_t object.
  */
 struct propagate_real_event_s : public event_s {
+      const char* name(void) const { return "propagate_real_event_s"; }
 	/* Propagate the output of this net. */
       vvp_net_t*net;
 	/* value to propagate */

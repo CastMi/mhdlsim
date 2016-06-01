@@ -63,6 +63,7 @@ struct vthread_event_s : public event_s {
       vthread_t thr;
       void run_run(void);
       void single_step_display(void);
+      const char* name(void) const { return "vthread_event_s"; }
 
       static void* operator new(size_t);
       static void operator delete(void*);
@@ -100,6 +101,7 @@ struct del_thr_event_s : public event_s {
       vthread_t thr;
       void run_run(void);
       void single_step_display(void);
+      const char* name(void) const { return "del_thr_event_s"; }
 };
 
 void del_thr_event_s::run_run(void)
@@ -150,6 +152,7 @@ struct assign_vector8_event_s  : public event_s {
       vvp_vector8_t val;
       void run_run(void);
       void single_step_display(void);
+      const char* name(void) const { return "assign_vector8_event_s"; }
 
       static void* operator new(size_t);
       static void operator delete(void*);
@@ -187,6 +190,7 @@ struct assign_real_event_s  : public event_s {
       double val;
       void run_run(void);
       void single_step_display(void);
+      const char* name(void) const { return "assign_real_event_s"; }
 
       static void* operator new(size_t);
       static void operator delete(void*);
@@ -225,6 +229,7 @@ struct assign_array_word_s  : public event_s {
       vvp_vector4_t val;
       unsigned off;
       void run_run(void);
+      const char* name(void) const { return "assign_array_word_s"; }
 
       static void* operator new(size_t);
       static void operator delete(void*);
@@ -278,6 +283,7 @@ struct assign_array_r_word_s  : public event_s {
       unsigned adr;
       double val;
       void run_run(void);
+      const char* name(void) const { return "assign_array_r_word_s"; }
 
       static void* operator new(size_t);
       static void operator delete(void*);
@@ -309,6 +315,7 @@ struct generic_event_s : public event_s {
       bool delete_obj_when_done;
       void run_run(void);
       void single_step_display(void);
+      const char* name(void) const { return "generic_event_s"; }
 
       static void* operator new(size_t);
       static void operator delete(void*);

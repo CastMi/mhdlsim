@@ -804,6 +804,7 @@ static vpiHandle signal_put_value(vpiHandle ref, s_vpi_value*vp, int flags)
       struct __vpiSignal*rfp = dynamic_cast<__vpiSignal*>(ref);
       assert(rfp);
       vvp_net_ptr_t dest(rfp->node, 0);
+      rfp->node->notify(rfp->node);
 
       bool net_flag = ref->get_type_code()==vpiNet;
 

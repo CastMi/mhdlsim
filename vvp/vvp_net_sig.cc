@@ -123,6 +123,7 @@ void vvp_net_t::force_vec4(const vvp_vector4_t&val, vvp_vector2_t mask)
       fil->force_fil_vec4(val, mask);
       fun->force_flag(false);
       vvp_send_vec4(out_, val, 0);
+      notify(this);
 }
 
 void vvp_net_t::force_vec8(const vvp_vector8_t&val, vvp_vector2_t mask)
@@ -131,6 +132,7 @@ void vvp_net_t::force_vec8(const vvp_vector8_t&val, vvp_vector2_t mask)
       fil->force_fil_vec8(val, mask);
       fun->force_flag(false);
       vvp_send_vec8(out_, val);
+      notify(this);
 }
 
 void vvp_net_t::force_real(double val, vvp_vector2_t mask)
@@ -139,6 +141,7 @@ void vvp_net_t::force_real(double val, vvp_vector2_t mask)
       fil->force_fil_real(val, mask);
       fun->force_flag(false);
       vvp_send_real(out_, val, 0);
+      notify(this);
 }
 
 /* **** vvp_fun_signal methods **** */

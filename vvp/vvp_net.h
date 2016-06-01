@@ -24,6 +24,7 @@
 # include  "vvp_vpi_callback.h"
 # include  "permaheap.h"
 # include  "vvp_object.h"
+# include  "observable.h"
 # include  <cstddef>
 # include  <cstdlib>
 # include  <cstring>
@@ -1107,7 +1108,7 @@ template <class T> ostream& operator << (ostream&out, vvp_sub_pointer_t<T> val)
  * methods of the vvp_net_t class are similar, but they follow the
  * output, possibly filtered, from the vvp_net_t.
  */
-class vvp_net_t {
+class vvp_net_t : public Observable {
     public:
       vvp_net_t();
 
@@ -1670,6 +1671,7 @@ inline void vvp_net_t::send_vec4(const vvp_vector4_t&val, vvp_context_t context)
 {
       if (fil == 0) {
 	    vvp_send_vec4(out_, val, context);
+       notify(this);
 	    return;
       }
 
@@ -1684,6 +1686,7 @@ inline void vvp_net_t::send_vec4(const vvp_vector4_t&val, vvp_context_t context)
 	    vvp_send_vec4(out_, rep, context);
 	    break;
       }
+      notify(this);
 }
 
 inline void vvp_net_t::send_vec4_pv(const vvp_vector4_t&val,
@@ -1692,6 +1695,7 @@ inline void vvp_net_t::send_vec4_pv(const vvp_vector4_t&val,
 {
       if (fil == 0) {
 	    vvp_send_vec4_pv(out_, val, base, wid, vwid, context);
+       notify(this);
 	    return;
       }
 
@@ -1707,12 +1711,14 @@ inline void vvp_net_t::send_vec4_pv(const vvp_vector4_t&val,
 	    vvp_send_vec4_pv(out_, rep, base, wid, vwid, context);
 	    break;
       }
+      notify(this);
 }
 
 inline void vvp_net_t::send_vec8(const vvp_vector8_t&val)
 {
       if (fil == 0) {
 	    vvp_send_vec8(out_, val);
+       notify(this);
 	    return;
       }
 
@@ -1727,6 +1733,7 @@ inline void vvp_net_t::send_vec8(const vvp_vector8_t&val)
 	    vvp_send_vec8(out_, rep);
 	    break;
       }
+      notify(this);
 }
 
 inline void vvp_net_t::send_vec8_pv(const vvp_vector8_t&val,
@@ -1734,6 +1741,7 @@ inline void vvp_net_t::send_vec8_pv(const vvp_vector8_t&val,
 {
       if (fil == 0) {
 	    vvp_send_vec8_pv(out_, val, base, wid, vwid);
+       notify(this);
 	    return;
       }
 
@@ -1749,6 +1757,7 @@ inline void vvp_net_t::send_vec8_pv(const vvp_vector8_t&val,
 	    vvp_send_vec8_pv(out_, rep, base, wid, vwid);
 	    break;
       }
+      notify(this);
 }
 
 inline void vvp_net_t::send_real(double val, vvp_context_t context)
@@ -1757,6 +1766,7 @@ inline void vvp_net_t::send_real(double val, vvp_context_t context)
 	    return;
 
       vvp_send_real(out_, val, context);
+      notify(this);
 }
 
 
@@ -1766,6 +1776,7 @@ inline void vvp_net_t::send_string(const std::string&val, vvp_context_t context)
 	    return;
 
       vvp_send_string(out_, val, context);
+      notify(this);
 }
 
 
@@ -1775,6 +1786,7 @@ inline void vvp_net_t::send_object(vvp_object_t val, vvp_context_t context)
 	    return;
 
       vvp_send_object(out_, val, context);
+      notify(this);
 }
 
 

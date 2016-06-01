@@ -122,6 +122,7 @@ static void real_var_get_value(vpiHandle ref, s_vpi_value*vp)
 	    = dynamic_cast<vvp_signal_value*>(rfp->net->fil);
 
       fil->get_signal_value(vp);
+      rfp->net->notify(rfp->net);
 }
 
 static vpiHandle real_var_put_value(vpiHandle ref, p_vpi_value vp, int flags)
@@ -129,6 +130,7 @@ static vpiHandle real_var_put_value(vpiHandle ref, p_vpi_value vp, int flags)
       struct __vpiRealVar*rfp = dynamic_cast<__vpiRealVar*>(ref);
       assert(rfp);
       vvp_net_ptr_t destination (rfp->net, 0);
+      rfp->net->notify(rfp->net);
 
 	/* If this is a release, then we are not really putting a
 	   value. Instead, issue a release "command" to the signal

@@ -41,8 +41,6 @@ unsigned long count_thread_events = 0;
   // Count the time events (A time cell created)
 unsigned long count_time_events = 0;
 
-static void* event_s::operator new (size_t size) { return ::new char[size]; }
-static void  event_s::operator delete(void*ptr)  { ::delete[]( (char*)ptr ); }
 
 void event_s::single_step_display(void)
 {
@@ -115,28 +113,6 @@ void del_thr_event_s::single_step_display(void)
       cerr << "del_thr_event: Reap completed thread"
 	   << " scope=" << scope->vpi_get_str(vpiFullName) << endl;
 }
-
-struct assign_vector4_event_s  : public event_s {
-	/* The default constructor. */
-      explicit assign_vector4_event_s(const vvp_vector4_t&that) : val(that) {
-	    base = 0;
-	    vwid = 0;
-      }
-
-	/* Where to do the assign. */
-      vvp_net_ptr_t ptr;
-	/* Value to assign. */
-      vvp_vector4_t val;
-	/* Offset of the part into the destination. */
-      unsigned base;
-	/* Width of the destination vector. */
-      unsigned vwid;
-      void run_run(void);
-      void single_step_display(void);
-
-      static void* operator new(size_t);
-      static void operator delete(void*);
-};
 
 void assign_vector4_event_s::run_run(void)
 {
@@ -276,30 +252,6 @@ void assign_array_word_s::operator delete(void*ptr)
 
 unsigned long count_assign_aword_pool(void) { return array_w_heap.pool; }
 
-/*
- * This class supports the propagation of vec4 outputs from a
- * vvp_net_t object.
- */
-struct propagate_vector4_event_s : public event_s {
-	/* The default constructor. */
-      explicit propagate_vector4_event_s(const vvp_vector4_t&that) : val(that) {
-	    net = NULL;
-      }
-	/* A constructor that makes the val directly. */
-      propagate_vector4_event_s(const vvp_vector4_t&that, unsigned adr, unsigned wid)
-      : val(that,adr,wid) {
-	    net = NULL;
-      }
-
-	/* Propagate the output of this net. */
-      vvp_net_t*net;
-	/* value to propagate */
-      vvp_vector4_t val;
-	/* Action */
-      void run_run(void);
-      void single_step_display(void);
-};
-
 void propagate_vector4_event_s::run_run(void)
 {
       net->send_vec4(val, 0);
@@ -310,19 +262,6 @@ void propagate_vector4_event_s::single_step_display(void)
       cerr << "propagate_vector4_event: Propagate val=" << val << endl;
 }
 
-/*
- * This class supports the propagation of real outputs from a
- * vvp_net_t object.
- */
-struct propagate_real_event_s : public event_s {
-	/* Propagate the output of this net. */
-      vvp_net_t*net;
-	/* value to propagate */
-      double val;
-	/* Action */
-      void run_run(void);
-      void single_step_display(void);
-};
 
 void propagate_real_event_s::run_run(void)
 {
@@ -422,7 +361,7 @@ inline void* event_time_s::operator new (size_t size)
       return ptr;
 }
 
-inline void event_time_s::operator delete(void*ptr, size_t)
+void event_time_s::operator delete(void*ptr, size_t)
 {
       event_time_heap.free_slab(ptr);
 }
@@ -448,15 +387,15 @@ struct event_s* schedule_init_list = 0;
 /*
  * This is the head of the list of final events.
  */
-static struct event_s* schedule_final_list = 0;
+struct event_s* schedule_final_list = 0;
 
 /*
  * This flag is true until a VPI task or function finishes the
  * simulation.
  */
-static bool schedule_runnable = true;
-static bool schedule_stopped_flag  = false;
-static bool schedule_single_step_flag = false;
+bool schedule_runnable = true;
+bool schedule_stopped_flag  = false;
+bool schedule_single_step_flag = false;
 
 void schedule_finish(int)
 {
@@ -498,12 +437,12 @@ extern "C" void signals_handler(int)
       schedule_stopped_flag = true;
 }
 
-static void signals_capture(void)
+void signals_capture(void)
 {
       signal(SIGINT, &signals_handler);
 }
 
-static void signals_revert(void)
+void signals_revert(void)
 {
       signal(SIGINT, SIG_DFL);
 }
@@ -680,7 +619,7 @@ static void schedule_event_(struct event_s*cur, vvp_time64_t delay,
       }
 }
 
-static void schedule_event_push_(struct event_s*cur)
+void schedule_event_push_(struct event_s*cur)
 {
       if ((sched_list == 0) || (sched_list->delay > 0)) {
 	    schedule_event_(cur, 0, SEQ_ACTIVE);
@@ -902,7 +841,7 @@ vvp_time64_t schedule_simtime(void)
  * Once all the rosync callbacks are done we can safely delete any
  * threads that finished during this time step.
  */
-static void run_rosync(struct event_time_s*ctim)
+void run_rosync(struct event_time_s*ctim)
 {
       while (ctim->rosync) {
 	    struct event_s*cur = ctim->rosync->next;

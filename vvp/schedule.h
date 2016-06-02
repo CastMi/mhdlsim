@@ -42,8 +42,30 @@ struct event_s {
       virtual void single_step_display(void);
 
 	// Fallback new/delete
-      static void*operator new (size_t size);
-      static void operator delete(void*ptr);
+      static void* operator new (size_t size) { return ::new char[size]; }
+      static void  operator delete(void*ptr)  { ::delete[]( (char*)ptr ); }
+};
+
+struct assign_vector4_event_s  : public event_s {
+	/* The default constructor. */
+      explicit assign_vector4_event_s(const vvp_vector4_t&that) : val(that) {
+	    base = 0;
+	    vwid = 0;
+      }
+
+	/* Where to do the assign. */
+      vvp_net_ptr_t ptr;
+	/* Value to assign. */
+      vvp_vector4_t val;
+	/* Offset of the part into the destination. */
+      unsigned base;
+	/* Width of the destination vector. */
+      unsigned vwid;
+      void run_run(void);
+      void single_step_display(void);
+
+      static void* operator new(size_t);
+      static void operator delete(void*);
 };
 
 extern unsigned long count_time_events;
@@ -73,6 +95,43 @@ struct event_time_s {
       static void operator delete(void*obj, size_t s);
 };
 
+/*
+ * This class supports the propagation of vec4 outputs from a
+ * vvp_net_t object.
+ */
+struct propagate_vector4_event_s : public event_s {
+	/* The default constructor. */
+      explicit propagate_vector4_event_s(const vvp_vector4_t&that) : val(that) {
+	    net = NULL;
+      }
+	/* A constructor that makes the val directly. */
+      propagate_vector4_event_s(const vvp_vector4_t&that, unsigned adr, unsigned wid)
+      : val(that,adr,wid) {
+	    net = NULL;
+      }
+
+	/* Propagate the output of this net. */
+      vvp_net_t*net;
+	/* value to propagate */
+      vvp_vector4_t val;
+	/* Action */
+      void run_run(void);
+      void single_step_display(void);
+};
+
+/*
+ * This class supports the propagation of real outputs from a
+ * vvp_net_t object.
+ */
+struct propagate_real_event_s : public event_s {
+	/* Propagate the output of this net. */
+      vvp_net_t*net;
+	/* value to propagate */
+      double val;
+	/* Action */
+      void run_run(void);
+      void single_step_display(void);
+};
 
 /*
  * This causes a thread to be scheduled for execution. The schedule
@@ -87,6 +146,8 @@ extern void schedule_vthread(vthread_t thr, vvp_time64_t delay,
 			     bool push_flag =false);
 
 extern void schedule_final_vthread(vthread_t thr);
+
+void schedule_event_push_(struct event_s*);
 
 /*
  * Create an assignment event. The val passed here will be assigned to
@@ -184,6 +245,9 @@ extern void schedule_at_start_of_simtime(vvp_gen_event_t obj, vvp_time64_t delay
 /* Use this is schedule thread deletion (after rosync). */
 extern void schedule_del_thr(vthread_t thr);
 
+extern bool schedule_single_step_flag;
+extern void signals_revert(void);
+
 struct vvp_gen_event_s
 {
       virtual ~vvp_gen_event_s() =0;
@@ -192,17 +256,14 @@ struct vvp_gen_event_s
 };
 
 /*
- * This runs the simulator. It runs until all the functors run out or
- * the simulation is otherwise finished.
- */
-extern void schedule_simulate(void);
-
-/*
  * Get the current absolute simulation time. This is not used
  * internally by the scheduler (which uses time differences instead)
  * but is used for printouts and stuff.
  */
 extern vvp_time64_t schedule_simtime(void);
+
+extern void signals_capture(void);
+extern void run_rosync(struct event_time_s*ctim);
 
 /*
  * This function is the equivalent of the $finish system task. It

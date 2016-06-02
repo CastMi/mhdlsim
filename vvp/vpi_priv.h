@@ -127,7 +127,6 @@ class __vpiHandle {
       virtual free_object_fun_t free_object_fun(void);
 };
 
-
 /*
  * The vpiHandle for an iterator has this structure. The definition of
  * the methods lives in vpi_iter.c
@@ -229,11 +228,6 @@ struct __vpiScopedRealtime : public __vpiSystemTime {
       void vpi_get_value(p_vpi_value val);
 };
 
-struct __vpiPortInfo : public __vpiHandle {
-
-};
-
-
 /*
  * Scopes are created by .scope statements in the source. These
  * objects hold the items and properties that are knowingly bound to a
@@ -250,8 +244,10 @@ class __vpiScope : public __vpiHandle {
     public:
 	// Return the BASE name of the scope. This does not include
 	// any of the parent hierarchy.
+   // Instance name
       inline const char*scope_name() const { return name_; }
 
+   // Module name
       inline const char*scope_def_name() const { return tname_; }
 	// TRUE if this is an automatic func/task/block
       inline bool is_automatic() const { return is_automatic_; }

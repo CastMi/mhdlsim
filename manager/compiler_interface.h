@@ -29,10 +29,16 @@
  */
 class Compiler : public virtual Analyzer, public virtual Elaborator, public virtual Simulator {
    public:
-      Compiler() {};
+      enum Type { VERILOG, VHDL };
+      Compiler( Type type )
+         : type_(type) {};
       virtual ~Compiler() {};
 
-      enum Type { VERILOG, VHDL };
+      Type get_type() const {
+         return type_;
+      }
+   private:
+      const Type type_;
 
 };
 

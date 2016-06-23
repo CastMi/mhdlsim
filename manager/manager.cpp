@@ -21,6 +21,7 @@
 #include "elab_result.hpp"
 #include "net.h"
 #include <iostream>
+#include <algorithm>
 #include <string>
 #include <stack>
 
@@ -65,18 +66,19 @@ operator<<(std::ostream& os, const Compiler::Type& type) {
 };
 
 void
-Manager::add_instance(Compiler::Type type, Compiler* comp) {
+Manager::add_instance( Compiler* comp ) {
    assert( comp );
    for( const auto& it : instances_ ) {
-      assert( type != it.second );
+      assert( comp->get_type() != it->get_type() );
    }
-   instances_[comp] = type;
+   instances_.push_back(comp);
 }
 
 void
 Manager::error_message( const std::string& errormsg ) const {
-   assert( current_comp_  && instances_.find(current_comp_) != instances_.end() );
-   std::cerr << "<manager>: Error with the " <<  instances_.find(current_comp_)->second
+   assert( current_comp_  &&
+         std::find( instances_.begin(), instances_.end(), current_comp_ ) != instances_.end() );
+   std::cerr << "<manager>: Error with the " <<  current_comp_->get_type()
       << " compiler during " << current_step_;
    if( !errormsg.empty() )
       std::cerr << ": " << errormsg;
@@ -88,16 +90,16 @@ Manager::set_variable( sim_time_t& min ) {
    std::vector<Compiler*> tie;
    min = Simulator::maxSimValue();
    for( const auto& it : instances_ ) {
-      if( !it.first->other_event() ) {
+      if( !it->other_event() ) {
          continue;
       }
-      if( min > it.first->next_event() ) {
-         current_comp_ = it.first;
-         min = it.first->next_event();
+      if( min > it->next_event() ) {
+         current_comp_ = it;
+         min = it->next_event();
          tie.erase(tie.begin(), tie.end());
       }
-      else if( min == it.first->next_event() ) {
-         tie.push_back(it.first);
+      else if( min == it->next_event() ) {
+         tie.push_back(it);
       }
    }
    if( min != Simulator::maxSimValue() && !tie.empty() ) {
@@ -111,7 +113,7 @@ Manager::do_simulation() {
    int res = 0;
 
    for( const auto& it : instances_ ) {
-      current_comp_ = it.first;
+      current_comp_ = it;
       res = current_comp_->initialize();
       if( res ) {
          error_message( "initialization failed" );
@@ -144,7 +146,7 @@ Manager::do_simulation() {
             {
                auto& changed_sigs = current_result->changed_sigs;
                for( const auto& compiler : instances_ ) {
-                  if( compiler.first == current_comp_ )
+                  if( compiler == current_comp_ )
                      continue;
                   //for( const auto& abc : *changed_sigs )
                   //   compiler.first->notify(abc);
@@ -171,7 +173,7 @@ Manager::do_simulation() {
 void
 Manager::end_simulation() {
    for( const auto& it : instances_ ) {
-      current_comp_ = it.first;
+      current_comp_ = it;
       current_comp_->end_simulation();
    }
 }
@@ -181,7 +183,7 @@ Manager::do_analysis() {
    int res = 0;
 
    for( const auto& it : instances_ ) {
-      current_comp_ = it.first;
+      current_comp_ = it;
       res = current_comp_->analyze();
       if( res ) {
          error_message();
@@ -206,7 +208,7 @@ Manager::elaborate( ModuleInstance* mod_inst ) {
    std::stack<ModuleSpec*> look_for;
 
    for( const auto& it : instances_ ) {
-      current_comp_ = it.first;
+      current_comp_ = it;
       ModuleSpec* tmp = current_comp_->elaborate( mod_inst );
       if( tmp )
          look_for.push( tmp );
@@ -219,7 +221,7 @@ Manager::elaborate( ModuleInstance* mod_inst ) {
       }
       avoid_endless = look_for.top();
       for( const auto& it : instances_ ) {
-         current_comp_ = it.first;
+         current_comp_ = it;
          ElabResult* current_res = current_comp_->instantiate( *avoid_endless );
          switch( current_res->result() ) {
             case ElabResult::FOUND:
@@ -266,7 +268,7 @@ Manager::do_elaboration() {
 
    // Can we go ahead?
    for( const auto& it : instances_ ) {
-      current_comp_ = it.first;
+      current_comp_ = it;
       if ( !current_comp_->can_continue() )
          break;
    }
@@ -277,7 +279,7 @@ Manager::do_elaboration() {
    }
    // Emit code
    for( const auto& it : instances_ ) {
-      current_comp_ = it.first;
+      current_comp_ = it;
       res = current_comp_->emit_code();
       if( res ) {
          error_message("In emit_code()");

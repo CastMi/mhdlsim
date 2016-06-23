@@ -22,8 +22,8 @@
 
 #include "compiler_interface.h"
 #include "common_data_types.hpp"
-#include <list>
 #include <string>
+#include <vector>
 
 class Simulator;
 class Net;
@@ -40,13 +40,9 @@ public:
 
     /**
      * @brief Adds a new simulator instance to be managed.
-     * @param sim is the instance to be added.
-     * @param type is instance type.
+     * @param comp is the instance to be added.
      */
-    void add_instance(Compiler::Type type, Compiler* sim);
-    void add_instance(Compiler* sim, Compiler::Type type) {
-       add_instance( type, sim );
-    };
+    void add_instance( Compiler* comp );
 
     /**
      * @brief Starts the simulation.
@@ -69,7 +65,7 @@ private:
     bool set_variable( sim_time_t& );
 
     ///> Instances of simulators to manage.
-    std::map<Compiler*, Compiler::Type> instances_;
+    std::vector<Compiler*> instances_;
 
     ///> Currently active Compiler (i.e. executing code)
     Compiler* current_comp_;

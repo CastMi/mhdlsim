@@ -18,6 +18,6 @@
 
 #include "IcarusCompiler.hpp"
 
-IcarusCompiler::IcarusCompiler() {}
+IcarusCompiler::IcarusCompiler() : Compiler(Compiler::VERILOG) {}
 
 IcarusCompiler::~IcarusCompiler() {}

@@ -52,13 +52,13 @@ int main( int argc, char*argv[] )
    //if( ap.getVHDLFiles().size() ) {
       //vhdl.add_files( ap.getVHDLFiles() );
       //vhdl.processParam( ap.getVHDLParams() );
-      //dumbledore.add_instance( Compiler::Type::VHDL, vhdl );
+      //dumbledore.add_instance( vhdl );
    //}
 
    if( ap.getVerilogFiles().size() ) {
       verilog->add_files( ap.getVerilogFiles() );
       verilog->processParams( ap.getVerilogParams() );
-      dumbledore.add_instance( Compiler::Type::VERILOG, verilog.get() );
+      dumbledore.add_instance( verilog.get() );
    }
 
    int result = dumbledore.run( ap.getCompType() );
